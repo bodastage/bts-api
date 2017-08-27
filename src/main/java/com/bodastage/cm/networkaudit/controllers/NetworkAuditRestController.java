@@ -148,6 +148,12 @@ public class NetworkAuditRestController {
 
 	}
 	
+	/**
+	 * Get the rule category
+	 * 
+	 * @param rulePk
+	 * @return
+	 */
 	@RequestMapping(method = RequestMethod.GET, value = "/rules/fields/{rulePk}")
 	public @ResponseBody List<DBTableColumn> getAuditRuleFields(@PathVariable Long rulePk){
 		AuditRuleEntity auditRule = this.auditRuleRepository.findByPk(rulePk);
@@ -159,5 +165,17 @@ public class NetworkAuditRestController {
 		customDTQueries.setTablename(ruleTableName);
 		
 		return customDTQueries.getColumns( new DataTablesInput());
+	}
+	
+	/**
+	 * Get audit rule given the rule id
+	 * 
+	 * @param rulePk
+	 * @return AuditRuleEntity
+	 */
+	@RequestMapping(method = RequestMethod.GET, value = "/rule/{rulePk}")
+	public @ResponseBody AuditRuleEntity getAuditRule(@PathVariable Long rulePk) {
+		AuditRuleEntity auditRule = this.auditRuleRepository.findByPk(rulePk);
+		return auditRule;
 	}
 }
