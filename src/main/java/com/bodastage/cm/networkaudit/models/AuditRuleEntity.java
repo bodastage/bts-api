@@ -85,6 +85,18 @@ public class AuditRuleEntity {
 	 */
 	private String tableName;
 	
+	/**
+	 * The  date the rule was first run.
+	 */
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date firstRunDate;
+	
+	/**
+	 * The  date the rule was last run.
+	 */
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date lastRunDate;
+	
 	public Long getPk() {
 		return pk;
 	}
@@ -179,6 +191,22 @@ public class AuditRuleEntity {
 
 	public void setTableName(String tableName) {
 		this.tableName = tableName;
+	}
+
+	public Date getFirstRunDate() {
+		return firstRunDate;
+	}
+
+	public void setFirstRunDate(Date firstRunDate) {
+		this.firstRunDate = firstRunDate;
+	}
+
+	public Date getLastRunDate() {
+		return lastRunDate;
+	}
+
+	public void setLastRunDate(Date lastRunDate) {
+		this.lastRunDate = lastRunDate;
 	}
 		
 }
