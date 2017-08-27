@@ -28,23 +28,32 @@ import lombok.Data;
 public class AuditRuleEntity {
 
 	@GenericGenerator(
-	        name = "auditRuleSequenceGenerator",
-	        strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator",
-	        parameters = {
-	                @Parameter(name = "sequence_name", value = "audit_rule_sequence"),
-	                @Parameter(name = "initial_value", value = "1"),
-	                @Parameter(name = "increment_size", value = "1")
-	        }
+        name = "auditRuleSequenceGenerator",
+        strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator",
+        parameters = {
+            @Parameter(name = "sequence_name", value = "audit_rule_sequence"),
+            @Parameter(name = "initial_value", value = "1"),
+            @Parameter(name = "increment_size", value = "1")
+        }
 	)
 	@Id
 	@GeneratedValue(generator = "auditRuleSequenceGenerator")
 	private Long pk;
 	
+	/**
+	 * The name of the rule
+	 */
 	private String name;
 	
+	/**
+	 * The parent category
+	 */
 	@Column(name="category_pk", updatable=false, insertable=false)
 	private Long categoryPk;
 	
+	/**
+	 * Whether the rule is custom or in built
+	 */
 	private Boolean inBuilt;
 	
 	private @Type(type="text") String notes;
@@ -52,6 +61,7 @@ public class AuditRuleEntity {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name="category_pk", nullable=false)
 	private AuditCategoryEntity  auditCategoryEntity;
+	
 	
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date dateCreated;
@@ -65,6 +75,16 @@ public class AuditRuleEntity {
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date dateModified;
 
+	/**
+	 * The SQL query for the rule
+	 */
+	private @Type(type="text") String sql;
+	
+	/**
+	 * The name of the table containing the rules results
+	 */
+	private String tableName;
+	
 	public Long getPk() {
 		return pk;
 	}
@@ -143,6 +163,22 @@ public class AuditRuleEntity {
 
 	public void setAuditCategoryEntity(AuditCategoryEntity auditCategoryEntity) {
 		this.auditCategoryEntity = auditCategoryEntity;
+	}
+
+	public String getSql() {
+		return sql;
+	}
+
+	public void setSql(String sql) {
+		this.sql = sql;
+	}
+
+	public String getTableName() {
+		return tableName;
+	}
+
+	public void setTableName(String tableName) {
+		this.tableName = tableName;
 	}
 		
 }

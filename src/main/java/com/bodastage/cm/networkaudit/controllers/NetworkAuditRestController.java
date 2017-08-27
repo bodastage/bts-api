@@ -5,10 +5,12 @@ import java.util.Iterator;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.sql.DataSource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.datatables.mapping.DataTablesInput;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.bodastage.cm.common.CustomDTQueries;
+import com.bodastage.cm.common.DBTableColumn;
 import com.bodastage.cm.networkaudit.ACINode;
 import com.bodastage.cm.networkaudit.hateoas.AuditCategoryResource;
 import com.bodastage.cm.networkaudit.models.AuditCategoryEntity;
@@ -32,6 +36,9 @@ public class NetworkAuditRestController {
 
 	private static final Logger logger = LoggerFactory.getLogger(NetworkAuditRestController.class);
 
+	@Autowired
+    DataSource dataSource;
+	
 	@Autowired
 	private AuditRuleRepository auditRuleRepository;
 
@@ -139,5 +146,18 @@ public class NetworkAuditRestController {
 			return null;
 		}
 
+	}
+	
+	@RequestMapping(method = RequestMethod.GET, value = "/rules/fields/{rulePk}")
+	public @ResponseBody List<DBTableColumn> getAuditRuleFields(@PathVariable Long rulePk){
+		AuditRuleEntity auditRule = this.auditRuleRepository.findByPk(rulePk);
+		String ruleTableName = auditRule.getTableName();
+		
+		CustomDTQueries customDTQueries = new CustomDTQueries();
+		
+		customDTQueries.setDataSource(this.dataSource);
+		customDTQueries.setTablename(ruleTableName);
+		
+		return customDTQueries.getColumns( new DataTablesInput());
 	}
 }
