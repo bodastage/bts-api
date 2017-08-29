@@ -23,8 +23,6 @@ import lombok.Data;
 @Data
 @Entity
 @Table(name = "audit_rule")
-@SequenceGenerator(initialValue = 1, name = "audit_rule_pk", sequenceName = "audit_rule_seq")
-
 public class AuditRuleEntity {
 
 	@GenericGenerator(

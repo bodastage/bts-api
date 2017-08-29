@@ -1,4 +1,4 @@
-package com.bodastage.cm.networkaudit.repositories;
+package com.bodastage.cm.networkaudit.repositories.jpa;
 
 
 import java.util.Collection;

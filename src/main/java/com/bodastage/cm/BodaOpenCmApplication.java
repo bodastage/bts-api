@@ -15,9 +15,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 
 @Configuration
 //@EnableJpaRepositories(repositoryFactoryBeanClass = DataTablesRepositoryFactoryBean.class, basePackages = "com.bodastage.cm")
-@EnableJpaRepositories(basePackages = "com.bodastage.cm")
+@EnableJpaRepositories(basePackages = {"com.bodastage.cm"})
 @ComponentScan("com.bodastage.cm")
-//@EntityScan("com.bodastage.cm")
 @EnableAutoConfiguration
 @SpringBootApplication
 public class BodaOpenCmApplication {

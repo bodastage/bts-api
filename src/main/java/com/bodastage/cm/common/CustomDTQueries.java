@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +27,7 @@ import org.springframework.jdbc.core.ResultSetExtractor;
 public class CustomDTQueries {
 	private JdbcTemplate jdbcTemplate;
 	private String tablename = null;
+	private Map<String,String> columnTypes = new HashMap<String,String>();
 
 	private static final Logger logger = LoggerFactory.getLogger(CustomDTQueries.class);
 
@@ -42,8 +44,12 @@ public class CustomDTQueries {
 		if (isCount == true) {
 			sql = "SELECT count(*) FROM " + this.tablename + " T1 ";
 		}
+		
+		//Populate the column-type map
+		this.populateColumnTypes();
 
 		List<Column> columns = input.getColumns();
+		logger.info("CustomDTQueries::column count:" + columns.size());
 		int columnSearchCnt = 0;
 		String inputSearchValue = input.getSearch().getValue();
 		for (int i = 0; i < columns.size(); i++) {
@@ -57,7 +63,12 @@ public class CustomDTQueries {
 						sql += " WHERE ";
 					if (columnSearchCnt > 0)
 						sql += " OR ";
-					sql += " UPPER(" + columnName + ") LIKE UPPER('%" + columnSearchValue + "%') ";
+					
+					if(columnTypes.get(columnName).startsWith("int")) {
+						sql += " UPPER( CAST(" + columnName + " AS CHAR(20)) ) LIKE UPPER('%" + columnSearchValue + "%') ";
+					}else {
+						sql += " UPPER(" + columnName + " ) LIKE UPPER('%" + columnSearchValue + "%') ";
+					}
 					columnSearchCnt++;
 				}
 
@@ -66,7 +77,13 @@ public class CustomDTQueries {
 						sql += " WHERE ";
 					if (columnSearchCnt > 0)
 						sql += " OR ";
-					sql += " UPPER(" + columnName + ") LIKE UPPER('%" + inputSearchValue + "%') ";
+					
+					if(columnTypes.get(columnName).startsWith("int")) {
+						sql += " UPPER( CAST(" + columnName + " AS CHAR(20)) ) LIKE UPPER('%" + inputSearchValue + "%') ";
+					}else {
+						sql += " UPPER(" + columnName + ") LIKE UPPER('%" + inputSearchValue + "%') ";
+					}
+					
 					columnSearchCnt++;
 				}
 
@@ -77,8 +94,12 @@ public class CustomDTQueries {
 		if (paginate == true) {
 			int start = input.getStart();
 			int length = input.getLength();
-			sql += " LIMIT " + start + " , " + length; // for mysql
+			//int offset = (start -1) *length;
+			//sql += " LIMIT " + start + " , " + length; // for mysql
+			sql += " LIMIT " + length +  " OFFSET " + start; // for pgsql
 		}
+		
+		logger.info(sql);
 
 		return sql;
 	}
@@ -160,6 +181,22 @@ public class CustomDTQueries {
 		});
 
 		return columns;
+	}
+	
+	
+	private void populateColumnTypes() {
+		String queryBuilder = "SELECT * FROM " + this.tablename + " T1";
+		this.jdbcTemplate.query(queryBuilder, new ResultSetExtractor<Integer>() {
+			public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
+				ResultSetMetaData rsmd = rs.getMetaData();
+				int columnCount = rsmd.getColumnCount();
+				for (int i = 1; i <= columnCount; i++) {
+					columnTypes.put(rsmd.getColumnName(i), rsmd.getColumnTypeName(i));
+				}
+
+				return columnCount;
+			}
+		});
 	}
 
 	/**

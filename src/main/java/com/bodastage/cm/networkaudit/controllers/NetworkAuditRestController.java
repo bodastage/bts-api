@@ -3,14 +3,17 @@ package com.bodastage.cm.networkaudit.controllers;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.sql.DataSource;
+import javax.validation.Valid;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.datatables.mapping.DataTablesInput;
+import org.springframework.data.jpa.datatables.mapping.DataTablesOutput;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,8 +30,11 @@ import com.bodastage.cm.networkaudit.ACINode;
 import com.bodastage.cm.networkaudit.hateoas.AuditCategoryResource;
 import com.bodastage.cm.networkaudit.models.AuditCategoryEntity;
 import com.bodastage.cm.networkaudit.models.AuditRuleEntity;
-import com.bodastage.cm.networkaudit.repositories.AuditCategoryRepository;
-import com.bodastage.cm.networkaudit.repositories.AuditRuleRepository;
+import com.bodastage.cm.networkaudit.repositories.jpa.AuditCategoryRepository;
+import com.bodastage.cm.networkaudit.repositories.jpa.AuditRuleRepository;
+import com.fasterxml.jackson.annotation.JsonView;
+import com.bodastage.cm.networkaudit.hateoas.AuditCategoryResource;
+import com.bodastage.cm.networkaudit.hateoas.AuditRuleResource;
 
 @RestController
 @RequestMapping("/api/networkaudit")
@@ -139,7 +145,7 @@ public class NetworkAuditRestController {
 	 * @return
 	 */
 	@RequestMapping(method = RequestMethod.GET, value = "/category/{categoryPk}")
-	public com.bodastage.cm.networkaudit.hateoas.AuditCategoryResource getAuditCategory(@PathVariable Long categoryPk) {
+	public AuditCategoryResource getAuditCategory(@PathVariable Long categoryPk) {
 		try {
 			return new AuditCategoryResource(this.auditCategoryRepository.findByPk(categoryPk));
 		} catch (Exception e) {
@@ -174,8 +180,25 @@ public class NetworkAuditRestController {
 	 * @return AuditRuleEntity
 	 */
 	@RequestMapping(method = RequestMethod.GET, value = "/rule/{rulePk}")
-	public @ResponseBody AuditRuleEntity getAuditRule(@PathVariable Long rulePk) {
+	public AuditRuleResource getAuditRule(@PathVariable Long rulePk) {
+		
+		try {
+			return new AuditRuleResource(this.auditRuleRepository.findByPk(rulePk));
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
+	@JsonView(DataTablesOutput.View.class)
+	@RequestMapping(method = RequestMethod.POST, value = "/rule/dt_data/{rulePk}")
+	public DataTablesOutput<Map<String,Object>> getAuditRuleData(@PathVariable Long rulePk, @Valid @RequestBody DataTablesInput input) {
 		AuditRuleEntity auditRule = this.auditRuleRepository.findByPk(rulePk);
-		return auditRule;
+		String ruleTableName = auditRule.getTableName();
+		
+		CustomDTQueries customDTQueries = new CustomDTQueries();
+		
+		customDTQueries.setDataSource(this.dataSource);
+		customDTQueries.setTablename(ruleTableName);
+		return customDTQueries.findAll(input);
 	}
 }
