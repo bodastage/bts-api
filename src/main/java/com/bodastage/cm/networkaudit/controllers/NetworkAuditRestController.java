@@ -8,14 +8,18 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.sql.DataSource;
 import javax.validation.Valid;
+import javax.xml.ws.Response;
 
+import org.apache.activemq.ActiveMQConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.jpa.datatables.mapping.DataTablesInput;
 import org.springframework.data.jpa.datatables.mapping.DataTablesOutput;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -50,7 +54,14 @@ public class NetworkAuditRestController {
 
 	@Autowired
 	private AuditCategoryRepository auditCategoryRepository;
-
+	
+	@Autowired
+	private ApplicationContext appContext;
+	
+	//Create embedded broker
+	//ActiveMQConnectionFactory cf = new ActiveMQConnectionFactory("vm://localhost?broker.persistent=false");
+	
+	
 	/**
 	 * Get the aciTree entries for the rules and categories.
 	 * 
@@ -200,5 +211,16 @@ public class NetworkAuditRestController {
 		customDTQueries.setDataSource(this.dataSource);
 		customDTQueries.setTablename(ruleTableName);
 		return customDTQueries.findAll(input);
+	}
+	
+	@RequestMapping(method = RequestMethod.GET, value = "/rule/export/{rulePk}")
+	public HttpStatus exportRule(@PathVariable Long rulePk) {
+		AuditRuleEntity auditRule  = this.auditRuleRepository.findByPk(rulePk);
+		String qry = "SELECT * FROM " + auditRule.getTableName();
+		logger.info(auditRule.getSql());
+		JmsTemplate jms = appContext.getBean(JmsTemplate.class);
+		jms.convertAndSend("inbound.export-jobs", qry);
+		
+		return HttpStatus.OK;
 	}
 }
