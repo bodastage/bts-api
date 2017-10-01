@@ -16,6 +16,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.data.jpa.datatables.mapping.Column;
 import org.springframework.data.jpa.datatables.mapping.DataTablesInput;
 import org.springframework.data.jpa.datatables.mapping.DataTablesOutput;
+import org.springframework.data.jpa.datatables.mapping.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 
@@ -87,8 +88,34 @@ public class CustomDTQueries {
 					columnSearchCnt++;
 				}
 
+			}//if getSearchable() == True 
+			
+
+		}
+		
+		if(isCount == false) {
+
+			List<Order> orderList = input.getOrder();
+			
+			for (int i = 0; i < orderList.size(); i++) {
+				Order order = orderList.get(i);
+				Integer columnIndex = order.getColumn();
+				String dir = order.getDir();
+				
+				String columnName = columns.get(columnIndex).getName();
+				
+				if( i == 0) {
+					sql += " ORDER BY ";
+				}
+				
+				//Add comment after each column order 
+				if(i > 0)  sql += " , ";
+				
+				sql += columnName + " " + dir;
+				
 			}
 		}
+		
 
 		// @TODO: /check datasource drive to appropriate handle the pagination
 		if (paginate == true) {

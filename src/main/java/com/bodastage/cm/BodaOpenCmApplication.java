@@ -40,7 +40,7 @@ public class BodaOpenCmApplication {
                 //registry.addMapping("/api").allowedOrigins("http://localhost:7000");
             	
                 registry.addMapping("/**")
-                .allowedOrigins("*")
+                .allowCredentials(false)
                 //.allowedMethods("GET", "POST", "OPTIONS", "PUT")
                 //.allowedHeaders("Content-Type", "X-Requested-With", "accept", "Origin", "Access-Control-Request-Method",
                 //        "Access-Control-Request-Headers")

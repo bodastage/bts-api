@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.bodastage.cm.common.CustomDTQueries;
 import com.bodastage.cm.common.DBTableColumn;
+import com.bodastage.cm.common.ExportRequestMessage;
 import com.bodastage.cm.networkaudit.ACINode;
 import com.bodastage.cm.networkaudit.hateoas.AuditCategoryResource;
 import com.bodastage.cm.networkaudit.models.AuditCategoryEntity;
@@ -219,7 +220,13 @@ public class NetworkAuditRestController {
 		String qry = "SELECT * FROM " + auditRule.getTableName();
 		logger.info(auditRule.getSql());
 		JmsTemplate jms = appContext.getBean(JmsTemplate.class);
-		jms.convertAndSend("inbound.export-jobs", qry);
+		
+		ExportRequestMessage exportRequest = new ExportRequestMessage();
+		exportRequest.setOutputFileName(auditRule.getName());
+		exportRequest.setQuery(qry);
+		exportRequest.setType("csv");
+		jms.getMessageConverter();
+		jms.convertAndSend("inbound.export-jobs", exportRequest);
 		
 		return HttpStatus.OK;
 	}
