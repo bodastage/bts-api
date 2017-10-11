@@ -18,9 +18,6 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Type;
 import org.hibernate.annotations.Parameter;
 
-import lombok.Data;
-
-@Data
 @Entity
 @Table(name = "audit_rule")
 public class AuditRuleEntity {

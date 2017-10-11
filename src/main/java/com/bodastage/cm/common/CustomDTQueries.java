@@ -50,8 +50,9 @@ public class CustomDTQueries {
 		this.populateColumnTypes();
 
 		List<Column> columns = input.getColumns();
-		logger.info("CustomDTQueries::column count:" + columns.size());
+
 		int columnSearchCnt = 0;
+		String globalFilterSql = "";
 		String inputSearchValue = input.getSearch().getValue();
 		for (int i = 0; i < columns.size(); i++) {
 			Column column = columns.get(i);
@@ -59,40 +60,71 @@ public class CustomDTQueries {
 				String columnName = column.getName();
 
 				String columnSearchValue = column.getSearch().getValue();
-				if (columnSearchValue.length() > 0) {
-					if (columnSearchCnt == 0)
-						sql += " WHERE ";
-					if (columnSearchCnt > 0)
-						sql += " OR ";
+				if (inputSearchValue.length() > 0) {
 					
-					if(columnTypes.get(columnName).startsWith("int")) {
-						sql += " UPPER( CAST(" + columnName + " AS CHAR(20)) ) LIKE UPPER('%" + columnSearchValue + "%') ";
-					}else {
-						sql += " UPPER(" + columnName + " ) LIKE UPPER('%" + columnSearchValue + "%') ";
-					}
-					columnSearchCnt++;
-				}
-
-				if (columnSearchValue.length() == 0 && inputSearchValue.length() > 0) {
-					if (columnSearchCnt == 0)
-						sql += " WHERE ";
-					if (columnSearchCnt > 0)
-						sql += " OR ";
-					
-					if(columnTypes.get(columnName).startsWith("int")) {
-						sql += " UPPER( CAST(" + columnName + " AS CHAR(20)) ) LIKE UPPER('%" + inputSearchValue + "%') ";
-					}else {
-						sql += " UPPER(" + columnName + ") LIKE UPPER('%" + inputSearchValue + "%') ";
+					if (columnSearchCnt > 0) {
+						globalFilterSql += " OR ";
 					}
 					
+					if(columnTypes.get(columnName).startsWith("int")) {
+						globalFilterSql += " UPPER( CAST(" + columnName + " AS CHAR(20)) ) LIKE UPPER('%" + inputSearchValue + "%') ";
+					}else if(columnTypes.get(columnName).contains("time")) {
+						globalFilterSql += " UPPER(COALESCE(to_char("+columnName+", 'MM-DD-YYYY HH24:MI:SS'), '') ) LIKE UPPER('%" + inputSearchValue + "%') ";
+					}else {
+						globalFilterSql += " UPPER(" + columnName + " ) LIKE UPPER('%" + inputSearchValue + "%') ";
+					}
 					columnSearchCnt++;
 				}
 
 			}//if getSearchable() == True 
-			
 
 		}
 		
+		if (columnSearchCnt > 0) {
+			sql += " WHERE " + globalFilterSql;
+		}
+		
+		
+		//Handle per column filtering
+		//
+		//Per column search count
+		int perColumnSearchCnt = 0;
+		String perColumnFilterSql = "";
+		for (int i = 0; i < columns.size(); i++) {
+			Column column = columns.get(i);
+			if (column.getSearchable() == true) {
+				String columnName = column.getName();
+
+				String columnSearchValue = column.getSearch().getValue();
+				if (columnSearchValue.length() > 0) {
+					
+					if (perColumnSearchCnt > 0) {
+						perColumnFilterSql += " AND ";
+					}
+					
+					
+					if(columnTypes.get(columnName).startsWith("int")) {
+						perColumnFilterSql += " UPPER( CAST(" + columnName + " AS CHAR(20)) ) LIKE UPPER('%" + columnSearchValue + "%') ";
+					}else if(columnTypes.get(columnName).contains("time")) {
+						perColumnFilterSql += " UPPER(COALESCE(to_char("+columnName+", 'MM-DD-YYYY HH24:MI:SS'), '') ) LIKE UPPER('%" + columnSearchValue + "%') ";
+					}else {
+						perColumnFilterSql += " UPPER(" + columnName + " ) LIKE UPPER('%" + columnSearchValue + "%') ";
+					}
+					perColumnSearchCnt++;
+				}
+
+			}//if getSearchable() == True 
+		}
+		
+		if (columnSearchCnt == 0 && perColumnSearchCnt > 0) {
+			sql += " WHERE ( " + perColumnFilterSql + " ) ";
+		}
+		
+		if (columnSearchCnt > 0 && perColumnSearchCnt > 0) {
+			sql += " AND ( " + perColumnFilterSql + " ) ";
+		}
+		
+		//Handle column ordering/sorting
 		if(isCount == false) {
 
 			List<Order> orderList = input.getOrder();
@@ -117,7 +149,7 @@ public class CustomDTQueries {
 		}
 		
 
-		// @TODO: /check datasource drive to appropriate handle the pagination
+		// @TODO: /check datasource drive to appropriately handle the pagination
 		if (paginate == true) {
 			int start = input.getStart();
 			int length = input.getLength();
