@@ -1,6 +1,7 @@
 package com.bodastage.cm.technologies.controllers;
 
 import java.net.URI;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -15,9 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.bodastage.cm.technologies.hateoas.TechnologyResource;
 import com.bodastage.cm.technologies.models.TechnologyEntity;
 import com.bodastage.cm.technologies.repositories.TechnologyRepository;
+import com.bodastage.cm.vendors.models.VendorEntity;
 
 @RestController
 @RequestMapping("/api/technologies")
@@ -35,14 +36,9 @@ public class TechnologiesRestController {
 	 * @return
 	 */
 	@RequestMapping(method = RequestMethod.GET)
-	public Resources<TechnologyResource>  getTechnologies(){
+	public Collection<TechnologyEntity>  getTechnologies(){
 		
-		List<TechnologyResource> technologyResourceList = technologyRepository
-				.findAll().stream().map(TechnologyResource::new)
-				.collect(Collectors.toList());
-		
-		return new Resources<>(technologyResourceList);
-		
+		return technologyRepository.findAll();
 	}
 	
 	/**
@@ -53,13 +49,12 @@ public class TechnologiesRestController {
 	 * @return
 	 */
 	@RequestMapping(method = RequestMethod.GET, value = "/{techPk}")
-	public TechnologyResource getTechnology(@PathVariable Long techPk){
-		return new TechnologyResource(this.technologyRepository.findByPk(techPk));
+	public TechnologyEntity getTechnology(@PathVariable Long techPk){
+		return this.technologyRepository.findByPk(techPk);
 	}
 
 	/**
 	 * Add a technology.
-	 * API endpoint: {userId}/technologies
 	 * 
 	 * @since 1.0.0
 	 * @version 1.0.0
@@ -76,9 +71,7 @@ public class TechnologiesRestController {
 		//input.setModifiedby(userId);
 		TechnologyEntity technologyEntity = technologyRepository.save(input);
 		
-		Link forOneTech = new TechnologyResource(technologyEntity).getLink("self");
-		
-		return ResponseEntity.created(URI.create(forOneTech.getHref())).build(); 
+		return ResponseEntity.ok(technologyEntity); 
 	}
 	
 	/**

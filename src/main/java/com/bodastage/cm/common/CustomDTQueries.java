@@ -29,6 +29,15 @@ public class CustomDTQueries {
 	private JdbcTemplate jdbcTemplate;
 	private String tablename = null;
 	private Map<String,String> columnTypes = new HashMap<String,String>();
+	private Boolean doubleQuoteTableNames = false;
+
+	public Boolean getDoubleQuoteTableNames() {
+		return doubleQuoteTableNames;
+	}
+
+	public void setDoubleQuoteTableNames(Boolean doubleQuoteTableNames) {
+		this.doubleQuoteTableNames = doubleQuoteTableNames;
+	}
 
 	private static final Logger logger = LoggerFactory.getLogger(CustomDTQueries.class);
 
@@ -67,10 +76,13 @@ public class CustomDTQueries {
 					}
 					
 					if(columnTypes.get(columnName).startsWith("int")) {
+						if( doubleQuoteTableNames == true) columnName = "\"" + columnName + "\"";
 						globalFilterSql += " UPPER( CAST(" + columnName + " AS CHAR(20)) ) LIKE UPPER('%" + inputSearchValue + "%') ";
 					}else if(columnTypes.get(columnName).contains("time")) {
+						if( doubleQuoteTableNames == true) columnName = "\"" + columnName + "\"";
 						globalFilterSql += " UPPER(COALESCE(to_char("+columnName+", 'MM-DD-YYYY HH24:MI:SS'), '') ) LIKE UPPER('%" + inputSearchValue + "%') ";
 					}else {
+						if( doubleQuoteTableNames == true) columnName = "\"" + columnName + "\"";
 						globalFilterSql += " UPPER(" + columnName + " ) LIKE UPPER('%" + inputSearchValue + "%') ";
 					}
 					columnSearchCnt++;
@@ -104,10 +116,13 @@ public class CustomDTQueries {
 					
 					
 					if(columnTypes.get(columnName).startsWith("int")) {
+						if( doubleQuoteTableNames == true) columnName = "\"" + columnName + "\"";
 						perColumnFilterSql += " UPPER( CAST(" + columnName + " AS CHAR(20)) ) LIKE UPPER('%" + columnSearchValue + "%') ";
 					}else if(columnTypes.get(columnName).contains("time")) {
+						if( doubleQuoteTableNames == true) columnName = "\"" + columnName + "\"";
 						perColumnFilterSql += " UPPER(COALESCE(to_char("+columnName+", 'MM-DD-YYYY HH24:MI:SS'), '') ) LIKE UPPER('%" + columnSearchValue + "%') ";
 					}else {
+						if( doubleQuoteTableNames == true) columnName = "\"" + columnName + "\"";
 						perColumnFilterSql += " UPPER(" + columnName + " ) LIKE UPPER('%" + columnSearchValue + "%') ";
 					}
 					perColumnSearchCnt++;
@@ -143,6 +158,7 @@ public class CustomDTQueries {
 				//Add comment after each column order 
 				if(i > 0)  sql += " , ";
 				
+				if( doubleQuoteTableNames == true) columnName = "\"" + columnName + "\"";
 				sql += columnName + " " + dir;
 				
 			}

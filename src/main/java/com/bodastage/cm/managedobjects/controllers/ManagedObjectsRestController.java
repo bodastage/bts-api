@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import javax.sql.DataSource;
 import javax.validation.Valid;
 
 import org.slf4j.Logger;
@@ -34,10 +35,15 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.annotation.JsonView;
+import com.bodastage.cm.common.CustomDTQueries;
+import com.bodastage.cm.common.DBTableColumn;
 import com.bodastage.cm.managedobjects.hateoas.ManagedObjectResource;
 import com.bodastage.cm.managedobjects.models.MOACINode;
 import com.bodastage.cm.managedobjects.models.ManagedObjectEntity;
+import com.bodastage.cm.managedobjects.models.ManagedObjectSchemaEntity;
 import com.bodastage.cm.managedobjects.repositories.ManagedObjectRepository;
+import com.bodastage.cm.managedobjects.repositories.ManagedObjectSchemaRepository;
+import com.bodastage.cm.networkaudit.models.AuditRuleEntity;
 
 @RestController
 @RequestMapping("/api/managedobjects")
@@ -48,6 +54,12 @@ public class ManagedObjectsRestController {
 	@Autowired
 	private ManagedObjectRepository managedObjectRepository;
 
+	@Autowired
+	private ManagedObjectSchemaRepository managedObjectSchemaRepository;
+	
+	@Autowired
+    DataSource dataSource;
+	
 	
 	/**
 	 * @TODO: Add pagination
@@ -59,51 +71,31 @@ public class ManagedObjectsRestController {
 	 * @return
 	 */
 	@RequestMapping(method = RequestMethod.GET)
-	public Resources<ManagedObjectResource>  getManagedObects(
+	public Collection<ManagedObjectEntity>  getManagedObects(
 			@RequestParam(value = "vendorPk",required = false) Long vendorPk,
 			@RequestParam(value = "techPk",required = false) Long techPk,
 			@RequestParam(value = "swversionPk",required = false) Long swversionPk,
 			@RequestParam(value = "parentPk",required = false) Long parentPk
 			){
 
-		List<ManagedObjectResource> managedObjectResourceList = null;
 		
 		if( vendorPk != null && techPk != null && swversionPk == null && parentPk == null){
-			managedObjectResourceList = managedObjectRepository
-					.findByVendorPkAndTechnologyPk(vendorPk,techPk)
-					.stream()
-					.map(ManagedObjectResource::new)
-					.collect(Collectors.toList());
-			return new Resources<>(managedObjectResourceList);
+			return managedObjectRepository
+					.findByVendorPkAndTechnologyPk(vendorPk,techPk);
 		}
 
-		
-		
 		if( vendorPk != null && techPk == null & swversionPk == null && parentPk == null){
-			managedObjectResourceList = managedObjectRepository
-					.findByVendorPk(vendorPk)
-					.stream()
-					.map(ManagedObjectResource::new)
-					.collect(Collectors.toList());
-			return new Resources<>(managedObjectResourceList);
+			return managedObjectRepository.findByVendorPk(vendorPk);
 		}
 
 
 		if( vendorPk != null && techPk != null && swversionPk == null && parentPk != null){
-			managedObjectResourceList = managedObjectRepository
-					.findByVendorPkAndTechnologyPkAndParentPk(vendorPk,techPk,parentPk)
-					.stream()
-					.map(ManagedObjectResource::new)
-					.collect(Collectors.toList());
-			return new Resources<>(managedObjectResourceList);
+			return managedObjectRepository
+					.findByVendorPkAndTechnologyPkAndParentPk(vendorPk,techPk,parentPk);
 		}
 		
 		//Return all
-		managedObjectResourceList = managedObjectRepository
-				.findAll().stream().map(ManagedObjectResource::new)
-				.collect(Collectors.toList());
-		
-		return new Resources<>(managedObjectResourceList);
+		return managedObjectRepository.findAll();
 	}
 
 
@@ -113,7 +105,7 @@ public class ManagedObjectsRestController {
 	 * @since 1.0.0
 	 * @return
 	 */
-	@RequestMapping(value = "/acitree/{parentPk}", method = RequestMethod.GET)
+	@RequestMapping(value = "/tree/{parentPk}", method = RequestMethod.GET)
 	public @ResponseBody List<MOACINode> getManagedObectACIEntries(
 			@PathVariable Long parentPk,
 			@RequestParam(value = "vendorPk",required = false) Long vendorPk,
@@ -212,18 +204,16 @@ public class ManagedObjectsRestController {
 	/**
 	 * Get a particular managed object's details.
 	 * 
-	 * @param userId
 	 * @param moPk
 	 * @return
 	 */
 	@RequestMapping(method = RequestMethod.GET, value = "/{moPk}")
-	public ManagedObjectResource getManagedObject(@PathVariable Long moPk){
-		return new ManagedObjectResource(this.managedObjectRepository.findByPk(moPk));
+	public ManagedObjectEntity getManagedObject(@PathVariable Long moPk){
+		return this.managedObjectRepository.findByPk(moPk);
 	}
 
 	/**
 	 * Add a managed object.
-	 * 
 	 * 
 	 * @since 1.0.0
 	 * @version 1.0.0
@@ -235,8 +225,8 @@ public class ManagedObjectsRestController {
 		
 		//@TODO: Get user id from authorization and authentication checks
 		
-		input.setDatecreated(new Date());
-		input.setDatemodified(new Date());
+		input.setDateAdded(new Date());
+		input.setDateModified(new Date());
 		ManagedObjectEntity managedObjectEntity = managedObjectRepository.save(input);
 		
 		Link forOneMO = new ManagedObjectResource(managedObjectEntity).getLink("self");
@@ -293,53 +283,54 @@ public class ManagedObjectsRestController {
 	 * @param userId
 	 * @param input
 	 * @return
-	 *//**
+	 */
 	@RequestMapping(method = RequestMethod.GET,value="/mobrowser/columns/{moPk}")
-    public List<MOTableColumn> getDTColumns(@PathVariable Long userId, @PathVariable Long moPk, DataTablesInput input) {
-		//@TODO: authenticate user
+    public List<DBTableColumn> getDTColumns( @PathVariable Long moPk, DataTablesInput input) {
+		
+		//@TODO: Add error checks. Does MO exists etc...
 		
 		ManagedObjectEntity moEntity = managedObjectRepository.findByPk(moPk);
-		List<MODatasourceEntity> moDSEntityList = (List<MODatasourceEntity>)moDatasourceRepository.findByTechnologyPkAndVendorPk(moEntity.getTechnologyPk(), moEntity.getVendorPk());
-		MODatasourceEntity moDSEntity = moDSEntityList.get(0);
-		DatasourceEntity dsEntity = datasourceRepository.findByPk(moDSEntity.getDatasourcePk());
+		Collection<ManagedObjectSchemaEntity> moSchemaEntities = 
+			managedObjectSchemaRepository.findByVendorPkAndTechnologyPk(moEntity.getVendorPk(), moEntity.getTechnologyPk());
+				
+		//@TODO: Add check for whether MO exists
+		ManagedObjectSchemaEntity moSchemaEntity = moSchemaEntities.iterator().next();
+				
+		String tableName = moSchemaEntity.getSchemaName() + "." + moEntity.getName();
 		
-		String databaseType = dsEntity.getDatabaseType();
-		String hostname = dsEntity.getHostname();
-		String port = dsEntity.getPort();
-		String database = dsEntity.getDbname();
-		String username = dsEntity.getUsername();
-		String password = dsEntity.getPassword();
-		String otherOptions = "";
-		String driverName = "com.mysql.jdbc.Driver";
-		if(databaseType.equals("mysql")){
-			 driverName = "com.mysql.jdbc.Driver";
-			 otherOptions = "?zearg0roDateTimeBehavior=convertToNull";
-		}
+		CustomDTQueries customDTQueries = new CustomDTQueries();
 		
-		if(databaseType.equals("oracle")){
-			driverName = "com.oracle.jdbc.Driver";
-		}
+		customDTQueries.setDataSource(this.dataSource);
+		customDTQueries.setTablename(tableName);
 		
-		if(databaseType.equals("postgresql")){
-			driverName = "com.postgresql.jdbc.Driver";
-		}
+		return customDTQueries.getColumns( new DataTablesInput());
+    }
+	
+	@JsonView(DataTablesOutput.View.class)
+	@RequestMapping(method = RequestMethod.POST, value = "/mobrowser/dt/{moPk}")
+	public DataTablesOutput<Map<String,Object>> getMODTData(@PathVariable Long moPk, @Valid @RequestBody DataTablesInput input) {
 		
-		String connectionURL  = "jdbc:"+databaseType+"://"+hostname+":"+port+"/"+database+""+otherOptions  ;
+		//@TODO: Add error checks. Does MO exists etc...
 		
-		logger.info(connectionURL);
-		//@TODO: Get the repo settingsmoPkmoPk
-		DriverManagerDataSource dataSource = new DriverManagerDataSource();
-		dataSource.setDriverClassName(driverName);
-		dataSource.setUrl(connectionURL);
-		dataSource.setUsername(username);
-		dataSource.setPassword(password);
+		ManagedObjectEntity moEntity = managedObjectRepository.findByPk(moPk);
+		Collection<ManagedObjectSchemaEntity> moSchemaEntities = 
+			managedObjectSchemaRepository.findByVendorPkAndTechnologyPk(moEntity.getVendorPk(), moEntity.getTechnologyPk());
+				
+		//@TODO: Add check for whether MO exists
+		ManagedObjectSchemaEntity moSchemaEntity = moSchemaEntities.iterator().next();
+				
+		//Build qualified table name i.e. schema.table_name
+		String tableName = moSchemaEntity.getSchemaName() + "." + moEntity.getName();
 		
-		GenericMORepository genericMORepository = new GenericMORepository();
-		genericMORepository.setDataSource(dataSource);
-		genericMORepository.setTablename(moEntity.getName());
+		CustomDTQueries customDTQueries = new CustomDTQueries();
 		
-		return genericMORepository.getMOColumns(input);
-    }**/
+		customDTQueries.setDataSource(this.dataSource);
+		customDTQueries.setTablename(tableName);
+		
+		customDTQueries.setDoubleQuoteTableNames(true);
+		
+		return customDTQueries.findAll(input);
+	}
 	
 	/**
 	 * Return a managed objects data for dt.

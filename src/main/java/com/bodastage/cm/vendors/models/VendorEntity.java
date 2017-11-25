@@ -38,7 +38,7 @@ public class VendorEntity {
 	
 	private int addedBy;
 	
-	private int modifiedby;
+	private int modifiedBy;
 	
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date dateModified;
@@ -77,12 +77,12 @@ public class VendorEntity {
 		this.addedBy = addedBy;
 	}
 
-	public int getModifiedby() {
-		return modifiedby;
+	public int getModifiedBy() {
+		return modifiedBy;
 	}
 
-	public void setModifiedby(int modifiedby) {
-		this.modifiedby = modifiedby;
+	public void setModifiedby(int modifiedBy) {
+		this.modifiedBy = modifiedBy;
 	}
 
 }

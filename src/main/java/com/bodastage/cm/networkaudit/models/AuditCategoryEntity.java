@@ -27,7 +27,7 @@ public class AuditCategoryEntity {
 	        name = "auditCategorySequenceGenerator",
 	        strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator",
 	        parameters = {
-	                @Parameter(name = "sequence_name", value = "audit_category_sequence"),
+	                @Parameter(name = "sequence_name", value = "seq_audit_category"),
 	                @Parameter(name = "initial_value", value = "1"),
 	                @Parameter(name = "increment_size", value = "1")
 	        }

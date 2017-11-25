@@ -1,6 +1,7 @@
 package com.bodastage.cm.vendors.controllers;
 
 import java.net.URI;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.bodastage.cm.vendors.hateoas.VendorResource;
 import com.bodastage.cm.vendors.models.VendorEntity;
 import com.bodastage.cm.vendors.repositories.VendorRepository;
 
@@ -36,15 +36,12 @@ public class VendorsRestController {
 	 * @since 1.0.0
 	 * 
 	 * @return
+	 * 
+	 * @TODO: Add pagination
 	 */
 	@RequestMapping(method = RequestMethod.GET)
-	public Resources<VendorResource>  getVendors(){
-		
-		List<VendorResource> vendorResourceList = vendorRepository
-				.findAll().stream().map(VendorResource::new)
-				.collect(Collectors.toList());
-		
-		return new Resources<>(vendorResourceList);
+	public Collection<VendorEntity> getVendors(){
+		return vendorRepository.findAll();
 		
 	}
 	
@@ -55,8 +52,8 @@ public class VendorsRestController {
 	 * @return
 	 */
 	@RequestMapping(method = RequestMethod.GET, value = "/{vendorPk}")
-	public VendorResource getVendor(@PathVariable Long vendorPk){
-		return new VendorResource(this.vendorRepository.findByPk(vendorPk));
+	public VendorEntity getVendor(@PathVariable Long vendorPk){
+		return this.vendorRepository.findByPk(vendorPk);
 	}
 
 	/**
@@ -73,9 +70,7 @@ public class VendorsRestController {
 		
 		VendorEntity vendorEntity = vendorRepository.save(input);
 		
-		Link forOneVendor = new VendorResource(vendorEntity).getLink("self");
-		
-		return ResponseEntity.created(URI.create(forOneVendor.getHref())).build(); 
+		return ResponseEntity.ok(vendorEntity); 
 	}
 	
 	/**

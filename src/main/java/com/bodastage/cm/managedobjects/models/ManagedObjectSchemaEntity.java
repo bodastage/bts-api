@@ -14,21 +14,26 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
 
-
+/**
+ * Maps technology and vendor to a schema containing the managed objects
+ * 
+ * @author emmanuel.ssebaggala@bodastage.com
+ *
+ */
 @Entity
-@Table(name="managedobjects")
-public class ManagedObjectEntity {
+@Table(name="managedobjects_schemas")
+public class ManagedObjectSchemaEntity {
 	@GenericGenerator(
-	        name = "managedObjectsSequenceGenerator",
+	        name = "managedObjectsSchemasSequenceGenerator",
 	        strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator",
 	        parameters = {
-	                @Parameter(name = "sequence_name", value = "seq_managedobjects_pk"),
+	                @Parameter(name = "sequence_name", value = "seq_managedobjects_schemas_pk"),
 	                @Parameter(name = "initial_value", value = "1"),
 	                @Parameter(name = "increment_size", value = "1")
 	        }
 	)
 	@Id
-	@GeneratedValue(generator = "managedObjectsSequenceGenerator")
+	@GeneratedValue(generator = "managedObjectsSchemasSequenceGenerator")
 	private Long pk;
 	
 	@Column(name = "vendor_pk", nullable = false)
@@ -37,13 +42,9 @@ public class ManagedObjectEntity {
 	@Column(name = "tech_pk", nullable = false)
 	private Long technologyPk;
 
-	@Column(name = "parent_pk", nullable = false)
-	private Long parentPk;
-	
-	private String label;
 	
 	@Column(nullable = false)
-	private String name;
+	private String schemaName;
 		
 	private @Type(type="text") String notes;
 	
@@ -59,7 +60,7 @@ public class ManagedObjectEntity {
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date dateModified;
 	
-	public ManagedObjectEntity(){}
+	public ManagedObjectSchemaEntity(){}
 
 	public Long getPk() {
 		return pk;
@@ -69,12 +70,12 @@ public class ManagedObjectEntity {
 		this.pk = pk;
 	}
 
-	public String getName() {
-		return name;
+	public String getSchemaName() {
+		return schemaName;
 	}
 
-	public void setName(String name) {
-		this.name = name;
+	public void setSchemaName(String schemaName) {
+		this.schemaName = schemaName;
 	}
 
 	public String getNotes() {
@@ -133,20 +134,8 @@ public class ManagedObjectEntity {
 		this.dateModified = dateModified;
 	}
 
-	public String getLabel() {
-		return label;
+	public Date getDateModified() {
+		return dateModified;
 	}
 
-	public void setLabel(String label) {
-		this.label = label;
-	}
-
-	public Long getParentPk() {
-		return parentPk;
-	}
-
-	public void setParentPk(Long parentPk) {
-		this.parentPk = parentPk;
-	}	
-	
 }

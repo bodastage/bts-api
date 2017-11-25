@@ -37,14 +37,14 @@ public class TechnologyEntity {
 	private @Type(type="text") String notes;
 	
 	@Temporal(TemporalType.TIMESTAMP)
-	private Date datecreated;
+	private Date dateAdded;
 	
 	private int addedBy;
 	
 	private int modifiedBy;
 	
 	@Temporal(TemporalType.TIMESTAMP)
-	private Date datemodified;
+	private Date dateModified;
 	
 	public TechnologyEntity(){}
 
