@@ -26,10 +26,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
@@ -62,6 +63,8 @@ import com.bodastage.cm.networkaudit.models.AuditRuleEntity;
 import com.bodastage.cm.networkaudit.repositories.jpa.AuditCategoryRepository;
 import com.bodastage.cm.networkaudit.repositories.jpa.AuditRuleRepository;
 import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.netty.handler.codec.http.HttpResponse;
 
@@ -86,16 +89,11 @@ public class NetworkAuditRestController {
 	
 	@Autowired
 	private ApplicationContext appContext;
-	
-	@Autowired
-	@Qualifier("fileExportJob")
-	Job exportjob;
-	
-	@Autowired
-	JobLauncher jobLauncher;
-	
+
+	/**
 	@Autowired
 	JobRepository jobRepository;
+	**/
 	
 	//Create embedded broker
 	//ActiveMQConnectionFactory cf = new ActiveMQConnectionFactory("vm://localhost?broker.persistent=false");
@@ -254,22 +252,9 @@ public class NetworkAuditRestController {
 	
 	@RequestMapping(method = RequestMethod.GET, value = "/rule/export/{rulePk}")
 	public JobStatus exportRule(@PathVariable Long rulePk) {
-		AuditRuleEntity auditRule  = this.auditRuleRepository.findByPk(rulePk);
-		
-		/**
-		String qry = "SELECT * FROM " + auditRule.getTableName();
-		logger.info(auditRule.getSql());
-		JmsTemplate jms = appContext.getBean(JmsTemplate.class);
-		
-		ExportRequestMessage exportRequest = new ExportRequestMessage();
-		exportRequest.setOutputFileName(auditRule.getName());
-		exportRequest.setQuery(qry);
-		exportRequest.setType("csv");
-		jms.getMessageConverter();
-		jms.convertAndSend("inbound.export-jobs", exportRequest);
-		**/
 		 
 		 try {
+			 AuditRuleEntity auditRule  = this.auditRuleRepository.findByPk(rulePk);
 			 
 			 //Create timestamp to attach to file name
 			 Date dateNow = new Date();
@@ -280,38 +265,55 @@ public class NetworkAuditRestController {
 			 //Format: <rule_some_rule_name_20171023121034.csv>
 			 String exportFileName = auditRule.getName().replace(" ", "_").toLowerCase() + "_" + timestamp + ".csv";
 
-			 //Create job parameters
-			 JobParametersBuilder jobParametersBuilder = new JobParametersBuilder();
-			 jobParametersBuilder.addString("instance_id", UUID.randomUUID().toString(), true);
-			 jobParametersBuilder.addString("file_name", exportFileName, true);
-			 jobParametersBuilder.addString("query", "SELECT * FROM networkaudit.rule_missing_externals", true);
 			 
-			 JobParameters jobParameters = jobParametersBuilder.toJobParameters();
-			 
-			 jobLauncher.run(exportjob, jobParameters);
-			 
-			 JobExecution lastJobExecution = jobRepository.getLastJobExecution(exportjob.getName(), jobParameters);
-			 
-			 JobStatus jobStatus = new JobStatus();
-			 
-			 jobStatus.setId(lastJobExecution.getJobId());
-			 jobStatus.setStatus(lastJobExecution.getStatus().toString());
-			 
-			 CodeSource codeSource = BodaOpenCmApplication.class.getProtectionDomain().getCodeSource();
-			 File jarFile = new File(codeSource.getLocation().toURI().getPath());
-			 String jarDir = jarFile.getParentFile().getPath();
-			 
-			 //jobStatus.setMeta("{ \\\"file_name\\\": \\\"rule_missing_externals.csv\\\", "
-			 //		+ "\\\"file_path\\\": \\\""+ jarDir + File.separator + "exports" + File.separator + "rule_missing_externals.csv\\\"}");
-			 
-			 jobStatus.setMeta("{\"file_name\": \""+exportFileName+"\"}");
+			 //@TODO: Add filtering of the data
+			String qry = "SELECT * FROM " + auditRule.getTableName();
+			logger.info(auditRule.getSql());
+			JmsTemplate jms = appContext.getBean(JmsTemplate.class);
+			
+			jms.getMessageConverter();
+			
+			//Set parameters
+			Map map = new HashMap();
+			map.put("query", qry);
+			map.put("pk", auditRule.getPk());
+			map.put("name", auditRule.getName());
+			map.put("job", "export");
+			map.put("format", "csv");
+			map.put("file_name", exportFileName);
+			jms.convertAndSend("inQueue", map);
+
+			//Wait for 4milliseconds
+			Thread.sleep(4000);
+			
+			//Get job status
+	        JobParametersBuilder jobParametersBuilder =
+	                new JobParametersBuilder();
+	        jobParametersBuilder.addString("query", qry);
+	        jobParametersBuilder.addString("format", "csv");
+	        jobParametersBuilder.addString("fileName", exportFileName);
+	        
+	        JobParameters jobParameters = jobParametersBuilder.toJobParameters();
+	        //JobExecution lastJobExecution = jobRepository.getLastJobExecution("fileExportJob", jobParameters);
+	        
+	        //Create meta data for the export
+	        //It will hold details such as the file name
+	        ObjectMapper mapper = new ObjectMapper();
+	        ObjectNode metaNode = mapper.createObjectNode();
+	        metaNode.put("file_name", exportFileName);
+	        
+	        //Return job status to client
+			JobStatus jobStatus = new JobStatus();
+			//jobStatus.setId(lastJobExecution.getJobId());
+			//jobStatus.setStatus(lastJobExecution.getStatus().toString());
+			jobStatus.setMeta(metaNode.toString());
 			 
 			 return jobStatus;
 			 
 		 }catch(Exception e) {
 			 logger.error(e.getStackTrace().toString()); 
+			 logger.error(e.getMessage());
 		 }
-		 
 		 
 		return null;
 		//return HttpStatus.OK;
@@ -341,8 +343,22 @@ public class NetworkAuditRestController {
 		map.put("sql", qry);
 		map.put("pk", auditRule.getPk());
 		map.put("name", auditRule.getName());
+		map.put("job", "export");
+		map.put("format", "csv");
 		jms.convertAndSend("inQueue", map);
 		
 		return null;
 	}
+	
+	@RequestMapping(method = RequestMethod.GET, value = "/rule/export/status/{jobId}")
+	public JobStatus getExportJobStatus(@PathVariable Long jobId) {
+		JobExecution jobExecution = new JobExecution(jobId);
+		
+		JobStatus jobStatus = new JobStatus();
+		jobStatus.setId(jobId);
+		jobStatus.setStatus(jobExecution.getStatus().toString());
+		
+		return jobStatus;
+	}
+	
 }
