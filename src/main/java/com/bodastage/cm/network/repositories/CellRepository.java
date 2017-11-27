@@ -10,6 +10,8 @@ public interface CellRepository extends CrudRepository<CellEntity, Long> {
 	Collection<CellEntity> findAll();
 	Collection<CellEntity> findBySitePk( Long sitePk);
 	
+	Long countBySitePk(Long sitePk);
+	
 	/**
 	 * @TODO: Query cells by vendor and technology
 	Collection<CellEntity> findByVendorPk(Long vendorPk);

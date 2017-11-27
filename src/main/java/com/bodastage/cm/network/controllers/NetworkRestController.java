@@ -20,8 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.bodastage.cm.network.repositories.CellRepository;
 import com.bodastage.cm.network.repositories.NodeRepository;
 import com.bodastage.cm.network.repositories.SiteRepository;
+import com.bodastage.cm.network.models.CellEntity;
 import com.bodastage.cm.network.models.NetworkACINode;
 import com.bodastage.cm.network.models.NodeEntity;
+import com.bodastage.cm.network.models.SiteEntity;
 
 @RestController
 @RequestMapping("/api/network")
@@ -96,8 +98,8 @@ public class NetworkRestController {
 			//ENodeBs
 			NetworkACINode aciENodeBNode = new NetworkACINode();
 			aciENodeBNode.setId("enodeb_root");
-			//aciENodeBNode.setLabel("ENodeB(" + siteRepository.countByTechnologyPk(3) + ")"); //@TODO: Fix
-			aciENodeBNode.setLabel("ENodeB(0)");
+			aciENodeBNode.setLabel("ENodeB(" + siteRepository.countByTechnologyPk((long)3) + ")");
+			//aciENodeBNode.setLabel("ENodeB(0)");
 			aciENodeBNode.setInode(true);
 			aciNodes.add(aciENodeBNode);
 			
@@ -105,15 +107,13 @@ public class NetworkRestController {
 		}
 
 		//Get list of MSCs
-		if(parentId.equals("msc_root") && parentPk == null && source.equals("live") && nodeType.equals("")){
+		if(parentId.equals("msc_root") && source.equals("live") && nodeType.equals("")){
 			Collection<NodeEntity> mscList = nodeRepository.findByType("MSC");
 			Iterator<NodeEntity> iter = mscList.iterator();
 			while(iter.hasNext()){
 				NodeEntity e = iter.next();
-				//Long cnt = planMSCBSCMapRepository.countByMscPk(e.getPk());
 				NetworkACINode aciNode = new NetworkACINode();
 				aciNode.setId(e.getPk().toString());
-				//aciNode.setLabel(e.getName()+"("+cnt.toString()+")");
 				aciNode.setLabel(e.getName());
 				aciNode.setInode(false);
 				aciNode.set_nodeType("msc");
@@ -124,18 +124,20 @@ public class NetworkRestController {
 		}
 		
 		//Get BSCs
-		if(parentId.equals("bsc_root")  && parentPk == null && source.equals("live") && nodeType.equals("")){
+		if(parentId.equals("bsc_root")  && source.equals("live") && nodeType.equals("")){
 			Collection<NodeEntity> bscList = nodeRepository.findByType("BSC");
 			Iterator<NodeEntity> iter = bscList.iterator();
 			while(iter.hasNext()){
 				NodeEntity e = iter.next();
-				//Long cnt = planBTSRepository.countByParentPk(e.getPk());
+				Long cnt = siteRepository.countByNodePk(e.getPk());
 				NetworkACINode aciNode = new NetworkACINode();
-				aciNode.setId(e.getPk().toString() );
-				//aciNode.setLabel(e.getName()+"("+cnt.toString()+")");
-				aciNode.setLabel(e.getName());
+				
+				String id = "bsc_" + e.getPk();
+				aciNode.setId(id ); //Set id as bsc_1,bsc_2,etc...
+				aciNode.setLabel(e.getName()+"("+cnt.toString()+")");
 				aciNode.setInode(true);
 				aciNode.set_nodeType("bsc");
+				aciNode.set_elementId(e.getPk());
 				aciNode.setSource("live");
 				aciNodes.add( aciNode );
 			}
@@ -143,24 +145,120 @@ public class NetworkRestController {
 		}
 		
 		//Get RNCs
-		if(parentId.equals("rnc_root")  && parentPk == null && source.equals("live") && nodeType.equals("")){
+		if(parentId.equals("rnc_root")  && source.equals("live") && nodeType.equals("")){
 			Collection<NodeEntity> rncList = nodeRepository.findByType("RNC");
 			Iterator<NodeEntity> iter = rncList.iterator();
 			while(iter.hasNext()){
 				NodeEntity e = iter.next();
-				//Long cnt = planBTSRepository.countByParentPk(e.getPk());
+				Long cnt = siteRepository.countByNodePk(e.getPk());
 				NetworkACINode aciNode = new NetworkACINode();
-				aciNode.setId(e.getPk().toString() );
-				aciNode.setLabel(e.getName());
+				aciNode.setId("rnc_" + e.getPk() );
+				aciNode.set_elementId(e.getPk());
+				aciNode.setLabel(e.getName() + "(" + cnt + ")");
 				aciNode.setInode(true);
 				aciNode.set_nodeType("rnc");
+				aciNode.set_elementId(e.getPk());
 				aciNode.setSource("live");
 				aciNodes.add( aciNode );
 			}
 			return aciNodes;
 		}
 		
-
+		//Get ENodeBs
+		if(parentId.equals("enodeb_root")  && source.equals("live") && nodeType.equals("")){
+			Collection<SiteEntity> enodeBList = siteRepository.findByTechnologyPk((long)3); //@TODO: Pick technlogy by calling the technology table
+			Iterator<SiteEntity> iter = enodeBList.iterator();
+			while(iter.hasNext()){
+				SiteEntity e = iter.next();
+				NetworkACINode aciNode = new NetworkACINode();
+				aciNode.setId( "site_" + e.getPk() );
+				aciNode.set_elementId(e.getPk());
+				aciNode.setLabel(e.getName());
+				aciNode.setInode(true);
+				aciNode.set_nodeType("enodeb");
+				aciNode.setSource("live");
+				aciNodes.add( aciNode );
+			}
+			return aciNodes;
+		}
+				
+		//Gets sites under a BSC
+		if(parentId.startsWith("bsc_")  && source.equals("live") && nodeType.equals("bsc")){
+			Collection<SiteEntity> siteList = siteRepository.findByNodePk(parentPk);
+			Iterator<SiteEntity> iter = siteList.iterator();
+			while(iter.hasNext()){
+				SiteEntity e = iter.next();
+				Long cnt = cellRepository.countBySitePk(e.getPk());
+				NetworkACINode aciNode = new NetworkACINode();
+				aciNode.setId("site_" + e.getPk() );
+				aciNode.set_elementId(e.getPk());
+				aciNode.setLabel(e.getName() + "(" + cnt + ")");
+				aciNode.setInode(true);
+				aciNode.set_nodeType("site");
+				aciNode.setSource("live");
+				aciNodes.add( aciNode );
+			}
+			return aciNodes;
+		}
+		
+		//Gets cells under a BSC
+		if(parentId.startsWith("site_")  && source.equals("live") && nodeType.equals("site")){
+			Collection<CellEntity> siteList = cellRepository.findBySitePk(parentPk);
+			Iterator<CellEntity> iter = siteList.iterator();
+			while(iter.hasNext()){
+				CellEntity e = iter.next();
+				
+				//Get channel groups for Ericsson and FHSY for Huawei
+				//Long cnt = cellRepository.countBySitePk(e.getPk());
+				NetworkACINode aciNode = new NetworkACINode();
+				aciNode.setId("cell_" + e.getPk() );
+				aciNode.set_elementId(e.getPk());
+				aciNode.setLabel(e.getName() );
+				aciNode.setInode(false);
+				aciNode.set_nodeType("cell");
+				aciNode.setSource("live");
+				aciNodes.add( aciNode );
+			}
+			return aciNodes;
+		}
+		
+		//Gets sites under an RNC
+		if(parentId.startsWith("rnc_")  && source.equals("live") && nodeType.equals("rnc")){
+			Collection<SiteEntity> siteList = siteRepository.findByNodePk(parentPk);
+			Iterator<SiteEntity> iter = siteList.iterator();
+			while(iter.hasNext()){
+				SiteEntity e = iter.next();
+				Long cnt = cellRepository.countBySitePk(e.getPk());
+				NetworkACINode aciNode = new NetworkACINode();
+				aciNode.setId("site_" + e.getPk() );
+				aciNode.set_elementId(e.getPk());
+				aciNode.setLabel(e.getName() + "(" + cnt + ")");
+				aciNode.setInode(true);
+				aciNode.set_nodeType("site");
+				aciNode.setSource("live");
+				aciNodes.add( aciNode );
+			}
+			return aciNodes;
+		}
+		
+		
+		//Gets cells under a RNC
+		if(parentId.startsWith("site_")  && source.equals("live") && nodeType.equals("site")){
+			Collection<CellEntity> siteList = cellRepository.findBySitePk(parentPk);
+			Iterator<CellEntity> iter = siteList.iterator();
+			while(iter.hasNext()){
+				CellEntity e = iter.next();
+				NetworkACINode aciNode = new NetworkACINode();
+				aciNode.setId("cell_" + e.getPk() );
+				aciNode.set_elementId(e.getPk());
+				aciNode.setLabel(e.getName() );
+				aciNode.setInode(false);
+				aciNode.set_nodeType("cell");
+				aciNode.setSource("live");
+				aciNodes.add( aciNode );
+			}
+			return aciNodes;
+		}
 		
 		return aciNodes;
 	}

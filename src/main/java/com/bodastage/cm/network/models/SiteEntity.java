@@ -2,6 +2,7 @@ package com.bodastage.cm.network.models;
 
 import java.util.Date;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
@@ -41,6 +42,11 @@ public class SiteEntity {
 	private int addedBy;
 	
 	private int modifiedBy;
+	
+	private Long vendorPk;
+	
+	@Column(name="tech_pk")
+	private Long technologyPk;
 	
 	
 	@Temporal(TemporalType.TIMESTAMP)
@@ -109,4 +115,21 @@ public class SiteEntity {
 	public void setNodePk(Long nodePk) {
 		this.nodePk = nodePk;
 	}
+
+	public Long getVendorPk() {
+		return vendorPk;
+	}
+
+	public void setVendorPk(Long vendorPk) {
+		this.vendorPk = vendorPk;
+	}
+
+	public Long getTechnologyPk() {
+		return technologyPk;
+	}
+
+	public void setTechnologyPk(Long technologyPk) {
+		this.technologyPk = technologyPk;
+	}
+	
 }

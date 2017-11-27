@@ -24,6 +24,8 @@ public class NetworkACINode {
 	private String source;
 	
 	private String _nodeType;
+	
+	private Long _elementId = (long)0;
 
 	public String getId() {
 		return id;
@@ -95,6 +97,14 @@ public class NetworkACINode {
 
 	public void set_nodeType(String _nodeType) {
 		this._nodeType = _nodeType;
+	}
+
+	public Long get_elementId() {
+		return _elementId;
+	}
+
+	public void set_elementId(Long _elementId) {
+		this._elementId = _elementId;
 	}
 	
 }

@@ -9,6 +9,11 @@ import com.bodastage.cm.network.models.SiteEntity;
 public interface SiteRepository extends CrudRepository<SiteEntity, Long> {
 	Collection<SiteEntity> findAll();
 	Collection<SiteEntity> findByNodePk( Long nodePk);
+	Collection<SiteEntity> findByTechnologyPk( Long technologyPk);
+	
+	Long countByTechnologyPk(Long technologyPk);
+	
+	Long countByNodePk(Long nodePk);
 	
 	/**
 	 * @TODO: Query sites by vendor and technology
